@@ -1,0 +1,29 @@
+name: ccm-migration
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: python -c "import rulebook; rulebook.load_rules()"
+      - run: python -c "import dictionary; dictionary.load_crosswalk()"
+      - run: pytest -q --cov --cov-fail-under=90
+      - run: python -m tools.report -o out/rulebook.md
+      # Customer artifacts are not in the repo. The pipeline and golden tests run against them
+      # only when CCM_FIXTURE_ROOT points at a directory containing the files listed in
+      # src/fixtures/pairs.yaml (self-hosted runner or a manual dispatch with a mounted volume).
+      - run: python -m tools.pipeline -o out/
+        if: ${{ vars.CCM_FIXTURE_ROOT != '' }}
+        env:
+          CCM_FIXTURE_ROOT: ${{ vars.CCM_FIXTURE_ROOT }}
