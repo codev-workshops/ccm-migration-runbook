@@ -1,0 +1,18 @@
+# https://docs.devin.ai/onboard-devin/environment-yaml
+# One-time setup (e.g., install system tools, global CLIs).
+initialize: |
+  python3 -m venv .venv
+  . .venv/bin/activate && pip install -q -U pip setuptools
+# Install project dependencies (runs during builds, surfaced to agent at session start).
+maintenance: |
+  . .venv/bin/activate && pip install -q -e ".[dev]"
+knowledge:
+  - name: lint
+    contents: |
+      . .venv/bin/activate && ruff check . && ruff format --check .
+  - name: test
+    contents: |
+      . .venv/bin/activate && pytest -q   # golden tests skip unless all raw artifacts are in src/fixtures/raw/ (gitignored)
+  - name: pipeline
+    contents: |
+      . .venv/bin/activate && python -m tools.pipeline -o out/   # non-strict; exit 2 = G1/G2 integrity failure
